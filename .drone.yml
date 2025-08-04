@@ -1,0 +1,40 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: run unit tests
+    image: golang:1.22
+    commands:
+      - cd AppA && go test ./...
+      - cd ../AppB && go test ./...
+
+  - name: build and push images
+    image: docker:dind
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker build -t wg1:5000/app-a:latest ./AppA
+      - docker build -t wg1:5000/app-b:latest ./AppB
+      - docker push wg1:5000/app-a:latest
+      - docker push wg1:5000/app-b:latest
+
+  - name: deploy to nodes
+    image: alpine
+    commands:
+      - apk add --no-cache openssh
+      - chmod 600 /root/.ssh/id_rsa
+      - ssh -o StrictHostKeyChecking=no vagrant@wg2 'bash -s' < ./deploy.sh
+      - ssh -o StrictHostKeyChecking=no vagrant@wg3 'bash -s' < ./deploy.sh
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+
+trigger:
+  event:
+    - push
+  branch:
+    - main
