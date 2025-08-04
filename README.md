@@ -37,8 +37,7 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 
 ### 5. Deployment
 
-- `build.sh` builds and pushes the images.
-- `deploy.sh` SSHs into each node, pulls the latest images, and runs containers on ports `8081` and `8082`.
+- `deploy.sh` builds and pushes the images. SSHs into each node, pulls the latest images, and runs containers on ports `8081` and `8082`.
 
 ### 6. Reverse Proxy with HAProxy
 
@@ -74,7 +73,7 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 ## How to Run It
 
 1. Clone the repository and run `vagrant up` from the project root.
-2. SSH into `wg1`, run:
+2. SSH into `wg1`, with vagrant ssh wg1 and run:
 
 ```bash
 ./deploy.sh
