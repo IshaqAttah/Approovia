@@ -55,8 +55,6 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 - Builds & pushes images
 - SSHs into `wg2` and `wg3` to run `deploy.sh`
 
-- Secrets (e.g., SSH keys, registry creds) managed via Drone secret store.
-
 ### 8. Monitoring
 
 - Prometheus and Grafana deployed via Docker on `wg1`.
