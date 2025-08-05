@@ -94,7 +94,7 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 
 ---
 
-## 🧯 Troubleshooting Tips
+## Troubleshooting Tips
 
 - WireGuard not connecting?
 
