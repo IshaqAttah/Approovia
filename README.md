@@ -64,8 +64,6 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 - Alerts defined for container restarts.
 - Dashboards created in Grafana.
 
----
-
 ## How to Run It
 
 1. Clone the repository and run `vagrant up` from the project root.
@@ -82,17 +80,13 @@ This project provisions a distributed system with three virtual machines (`wg1`,
 - `http://192.168.56.11:3000` (Grafana)
 - `http://192.168.56.11:8404/haproxy_stats`
 
----
-
-## ⚙️ Assumptions Made
+## Assumptions Made
 
 - All VMs use the same base box (Ubuntu 20.04).
 - `wg1` acts as registry, reverse proxy, and monitoring hub.
 - SSH access from `wg1` to `wg2` and `wg3` is passwordless (via Vagrant keys).
 - Docker registry uses insecure HTTP (trusted internally).
 - CI/CD runs from Drone CI hosted on `wg1`.
-
----
 
 ## Troubleshooting Tips
 
