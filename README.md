@@ -1,10 +1,6 @@
-Absolutely! Here's a concise `README.md` summarizing everything from Vagrant setup to monitoring and CI/CD:
-
----
-
 # Distributed Go Web Services Infrastructure
 
-This project provisions a distributed system with three virtual machines (`wg1`, `wg2`, and `wg3`) using Vagrant. It sets up secure networking via WireGuard, deploys two Go-based web services (`AppA` and `AppB`), configures a local Docker registry, reverse proxy via HAProxy, CI/CD with Drone CI, and monitoring using Prometheus + Grafana.
+This project provisions a distributed system with three virtual machines (`wg1`, `wg2`, and `wg3`) using Vagrant. It sets up secure networking via WireGuard, deploys two Go-based web services (`AppA` and `AppB`), configures a local Docker registry, reverse proxy via HAProxy, CI/CD with Drone CI, and monitoring using Prometheus + Grafana. Everything was set up and ran on a mac m1.
 
 ---
 
