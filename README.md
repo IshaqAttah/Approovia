@@ -72,17 +72,17 @@ json{
   "insecure-registries": ["192.168.253.135:5000"]
 }
 #Apply and restart
-# Then Download monitoring images
+# Then Download monitoring images from the terminal, not any of the vms.
 docker pull prom/prometheus:latest
 docker pull grafana/grafana:latest
 docker pull prom/alertmanager:latest
 
-# Tag for your registry
+# Tag for registry
 docker tag prom/prometheus:latest 192.168.253.135:5000/prometheus:latest
 docker tag grafana/grafana:latest 192.168.253.135:5000/grafana:latest
 docker tag prom/alertmanager:latest 192.168.253.135:5000/alertmanager:latest
 
-# Push to your registry
+# Push to registry
 docker push 192.168.253.135:5000/prometheus:latest
 docker push 192.168.253.135:5000/grafana:latest
 docker push 192.168.253.135:5000/alertmanager:latest
