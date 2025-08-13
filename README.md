@@ -114,31 +114,29 @@ curl http://192.168.253.133/service-b
 
 ## ** Key Assumptions**
 
-### **Environment**
+### Environment
 
-- Host OS: **macOS** or **Linux**
-- VM Provider: **VMware** or **VirtualBox**
-- Network: **192.168.253.x** IP range
-- Resources: **1GB RAM per VM**
+- Host OS: macOS or Linux
+- VM Provider: VMware or VirtualBox
+- Network: 192.168.253.x IP range
+- Resources: 1GB RAM per VM
 
-### **Docker & Services**
+### Docker & Services
 
 - Registry: Insecure local registry (dev only)
-- Architecture: **x86_64 compatible**
+- Architecture: \*\*x86_64 compatible
 - Ports: Containers listen on `0.0.0.0:8080`
 - Health Checks: Services respond to `GET /`
 
-### **Network & Security**
+### Network & Security
 
 - SSL: Self-signed certificates
 - Passwords: Default credentials (change for prod)
 - Access: `vagrant` user has `sudo` privileges
 
----
+## Troubleshooting
 
-## ** Troubleshooting**
-
-### **VMs Won't Start**
+### VMs Won't Start
 
 ```bash
 vagrant status
@@ -147,7 +145,7 @@ vagrant up
 vagrant up --debug
 ```
 
-### **Services Not Accessible**
+### Services Not Accessible
 
 ```bash
 # Check containers
@@ -161,7 +159,7 @@ sudo docker restart service-a service-b
 sudo docker logs service-a
 ```
 
-### **HAProxy Returns 503**
+### HAProxy Returns 503
 
 ```bash
 vagrant ssh wg1
@@ -170,7 +168,7 @@ curl http://192.168.253.133/stats
 sudo systemctl restart haproxy
 ```
 
-### **Monitoring Not Working**
+### Monitoring Not Working
 
 ```bash
 vagrant ssh wg1
@@ -180,7 +178,7 @@ sudo docker-compose down && sudo docker-compose up -d
 curl http://192.168.253.133:3000/api/health
 ```
 
-### **Docker Registry Issues**
+### Docker Registry Issues
 
 ```bash
 curl http://192.168.253.133:5000/v2/_catalog
@@ -188,9 +186,7 @@ vagrant ssh wg1
 sudo docker restart registry
 ```
 
----
-
-## ** Complete Reset**
+## Complete Reset
 
 ```bash
 vagrant destroy -f
@@ -201,9 +197,7 @@ vagrant up
 ./setup-monitoring-stack.sh
 ```
 
----
-
-## ** Quick Health Check**
+## Quick Health Check
 
 ```bash
 # Test services
@@ -218,9 +212,7 @@ vagrant ssh wg2 "echo 'wg2 ok'"
 vagrant ssh wg3 "echo 'wg3 ok'"
 ```
 
----
-
-## ** Success Criteria**
+## Success Criteria
 
 All 3 VMs are running
 Services respond via HAProxy
