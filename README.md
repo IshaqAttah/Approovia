@@ -9,7 +9,7 @@ A containerized microservices deployment platform with automated CI/CD, load bal
 
 ---
 
-## **📦 What This Project Includes**
+## ** What This Project Includes**
 
 - **Multi-VM Setup** – 3 VMs (`wg1`, `wg2`, `wg3`) with Vagrant
 - **Containerized Services** – Docker-based Go microservices
@@ -100,7 +100,7 @@ curl http://192.168.253.133/service-b
 
 ---
 
-## **🌐 Access Points**
+## ** Access Points**
 
 | Service           | URL                                                                                              | Login              |
 | ----------------- | ------------------------------------------------------------------------------------------------ | ------------------ |
@@ -136,7 +136,7 @@ curl http://192.168.253.133/service-b
 
 ---
 
-## **🛠 Troubleshooting**
+## ** Troubleshooting**
 
 ### **VMs Won't Start**
 
@@ -203,7 +203,7 @@ vagrant up
 
 ---
 
-## **✅ Quick Health Check**
+## ** Quick Health Check**
 
 ```bash
 # Test services
@@ -220,7 +220,7 @@ vagrant ssh wg3 "echo 'wg3 ok'"
 
 ---
 
-## **🎯 Success Criteria**
+## ** Success Criteria**
 
 All 3 VMs are running
 Services respond via HAProxy
