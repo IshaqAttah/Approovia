@@ -112,7 +112,7 @@ curl http://192.168.253.133/service-b
 
 ---
 
-## **⚙️ Key Assumptions**
+## ** Key Assumptions**
 
 ### **Environment**
 
