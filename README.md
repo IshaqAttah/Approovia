@@ -1,27 +1,18 @@
-Here’s a clean, well-structured **README.md** version of what you wrote.
-I formatted it for clarity, added headings, fenced code blocks, and tables so it’s presentation-ready.
-
----
-
-# **Complete DevOps Infrastructure Setup**
+# Complete DevOps Infrastructure Setup
 
 A containerized microservices deployment platform with automated CI/CD, load balancing, and monitoring.
 
----
+## What This Project Includes
 
-## ** What This Project Includes**
+- Multi-VM Setup – 3 VMs (`wg1`, `wg2`, `wg3`) with Vagrant
+- Containerized Services – Docker-based Go microservices
+- Load Balancing – HAProxy with SSL and health checks
+- CI/CD Pipeline – Drone CI with automated deployment
+- Monitoring – Prometheus + Grafana with alerting
 
-- **Multi-VM Setup** – 3 VMs (`wg1`, `wg2`, `wg3`) with Vagrant
-- **Containerized Services** – Docker-based Go microservices
-- **Load Balancing** – HAProxy with SSL and health checks
-- **CI/CD Pipeline** – Drone CI with automated deployment
-- **Monitoring** – Prometheus + Grafana with alerting
+## How to Run Everything
 
----
-
-## **🚀 How to Run Everything**
-
-### **Step 1 – Start VMs**
+### Step 1 – Start VMs
 
 ```bash
 # Start all VMs
@@ -31,9 +22,7 @@ vagrant up
 vagrant status
 ```
 
----
-
-### **Step 2 – Deploy Docker Services**
+### Step 2 – Deploy Docker Services
 
 ```bash
 cd Approovia
@@ -48,9 +37,7 @@ curl http://192.168.253.135:8081
 curl http://192.168.253.135:8082
 ```
 
----
-
-### **Step 3 – Setup Load Balancer**
+### Step 3 – Setup Load Balancer
 
 ```bash
 # Configure HAProxy on wg1
@@ -64,18 +51,14 @@ curl http://192.168.253.133:80/service-a
 curl http://192.168.253.133:80/service-b
 ```
 
----
-
-### **Step 4 – Setup CI/CD Pipeline**
+### Step 4 – Setup CI/CD Pipeline
 
 ```bash
 # Install Drone CI
 ./setup-drone-ci.sh
 ```
 
----
-
-### **Step 5 – Setup Monitoring**
+### Step 5 – Setup Monitoring
 
 ```bash
 # Install Prometheus & Grafana
@@ -87,7 +70,7 @@ curl http://192.168.253.133:80/service-b
 
 ---
 
-### **Step 6 – Test Everything**
+### Step 6 – Test Everything
 
 ```bash
 # Test services via load balancer
@@ -100,7 +83,7 @@ curl http://192.168.253.133/service-b
 
 ---
 
-## ** Access Points**
+## Access Points
 
 | Service           | URL                                                                                              | Login              |
 | ----------------- | ------------------------------------------------------------------------------------------------ | ------------------ |
@@ -110,9 +93,7 @@ curl http://192.168.253.133/service-b
 | **Prometheus**    | [Prometheus](http://192.168.253.133:9090)                                                        | None               |
 | **Grafana**       | [Grafana](http://192.168.253.133:3000)                                                           | `admin:admin123`   |
 
----
-
-## ** Key Assumptions**
+## Key Assumptions
 
 ### Environment
 
