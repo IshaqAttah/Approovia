@@ -192,13 +192,12 @@ curl http://192.168.253.133/service-b
 
 ## Access Points
 
-| Service           | URL                                                                                              | Login              |
-| ----------------- | ------------------------------------------------------------------------------------------------ | ------------------ |
-| **Services**      | [Service A](http://192.168.253.133/service-a) <br> [Service B](http://192.168.253.133/service-b) | None               |
-| **HAProxy Stats** | [HAProxy](http://192.168.253.133/stats)                                                          | `admin:admin123`   |
-| **Drone CI**      | [Drone](http://192.168.253.133:8080)                                                             | First user = admin |
-| **Prometheus**    | [Prometheus](http://192.168.253.133:9090)                                                        | None               |
-| **Grafana**       | [Grafana](http://192.168.253.133:3000)                                                           | `admin:admin123`   |
+| Service           | URL                                                                                                                        | Login            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| **Services**      | [Service A](https://0ba2fe09c83f.ngrok-free.app/service-a) <br> [Service B](https://0ba2fe09c83f.ngrok-free.app/service-b) | None             |
+| **HAProxy Stats** | [HAProxy](https://0ba2fe09c83f.ngrok-free.app/stats)                                                                       | `admin:admin123` |
+| **Prometheus**    | [Prometheus] (http://192.168.253.135:9090/targets)                                                                         | None             |
+| **Grafana**       | [Grafana] (http://192.168.253.135:9090/targets)                                                                            | `admin:admin123` |
 
 ## Key Assumptions
 
