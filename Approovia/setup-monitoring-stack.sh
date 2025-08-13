@@ -1,4 +1,4 @@
-#!/bin/bash
+k#!/bin/bash
 set -e
 
 echo "📊 Setting up Prometheus & Grafana Monitoring Stack"
@@ -32,7 +32,7 @@ configure_docker_metrics() {
     
     echo "Configuring Docker metrics on $vm_name ($vm_ip)..."
     
-    ssh -i "$vm_key" -o StrictHostKeyChecking=no $vm_user@$vm_ip << 'EOF'
+    ssh -i "$vm_key" -o StrictHostKeyChecking=no $vm_user@$vm_ip << EOF
     # Configure Docker daemon for metrics
     sudo mkdir -p /etc/docker
     
@@ -41,10 +41,10 @@ configure_docker_metrics() {
         # Backup existing config
         sudo cp /etc/docker/daemon.json /etc/docker/daemon.json.backup
         
-        # Merge with existing config (assuming insecure-registries might exist)
+        # Merge with existing config (using dynamic IP)
         sudo tee /etc/docker/daemon.json > /dev/null << 'DOCKER_CONFIG'
 {
-  "insecure-registries": ["192.168.253.133:5000"],
+  "insecure-registries": ["$IP_WG1:5000"],
   "metrics-addr": "0.0.0.0:9323",
   "experimental": true
 }
@@ -53,6 +53,7 @@ DOCKER_CONFIG
         # Create new config
         sudo tee /etc/docker/daemon.json > /dev/null << 'DOCKER_CONFIG'
 {
+  "insecure-registries": ["$IP_WG1:5000"],
   "metrics-addr": "0.0.0.0:9323",
   "experimental": true
 }
@@ -68,7 +69,7 @@ DOCKER_CONFIG
     # Verify metrics endpoint
     curl -s http://localhost:9323/metrics | head -5 || echo "Metrics endpoint not yet ready"
     
-    echo "✅ Docker metrics configured on $(hostname)"
+    echo "✅ Docker metrics configured on \$(hostname)"
 EOF
 }
 

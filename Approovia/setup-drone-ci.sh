@@ -109,25 +109,25 @@ sleep 10
 # Check if services are running
 sudo docker-compose ps
 
-echo "✅ Drone CI installation completed!"
+echo " Drone CI installation completed!"
 echo ""
-echo "🔗 Drone CI URLs:"
+echo " Drone CI URLs:"
 echo "   Drone Server: http://localhost:8080"
 echo "   External access: http://$IP_WG1:8080"
 echo ""
-echo "📋 Default login (if using open mode):"
+echo " Default login (if using open mode):"
 echo "   First user to register becomes admin"
 
 EOF
 
 echo ""
-echo "🎉 Drone CI setup completed!"
+echo " Drone CI setup completed!"
 echo ""
-echo "🔗 Access Drone CI:"
+echo " Access Drone CI:"
 echo "   From wg1: http://localhost:8080"
 echo "   From your Mac: http://$IP_WG1:8080"
 echo ""
-echo "📝 Next steps:"
+echo " Next steps:"
 echo "   1. Access Drone UI and register as admin"
 echo "   2. Create/connect your Git repository"
 echo "   3. Add the .drone.yml file to your project"

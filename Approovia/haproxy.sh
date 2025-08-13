@@ -32,7 +32,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 sudo cat /etc/ssl/certs/haproxy.crt /etc/ssl/private/haproxy.key | sudo tee /etc/ssl/private/haproxy.pem
 sudo chmod 600 /etc/ssl/private/haproxy.pem
 
-echo "✅ HAProxy installed and SSL certificate generated"
+echo " HAProxy installed and SSL certificate generated"
 EOF
 
 # Create HAProxy configuration
@@ -181,7 +181,7 @@ backend default_backend
 
 HAPROXY_CONFIG
 
-echo "✅ HAProxy configuration created"
+echo " HAProxy configuration created"
 EOF
 
 # Enable and start HAProxy
@@ -197,13 +197,13 @@ sudo systemctl restart haproxy
 # Check status
 sudo systemctl status haproxy --no-pager
 
-echo "✅ HAProxy is running"
+echo " HAProxy is running"
 EOF
 
 echo ""
-echo "🎉 HAProxy setup completed successfully!"
+echo " HAProxy setup completed successfully!"
 echo ""
-echo "📋 Access your services:"
+echo " Access your services:"
 echo "   HTTP:"
 echo "     http://$IP_WG1/service-a"
 echo "     http://$IP_WG1/service-b" 
@@ -216,7 +216,7 @@ echo "     https://$IP_WG1/service-b"
 echo "     https://$IP_WG1/health"
 echo "     https://$IP_WG1/stats (admin:admin123)"
 echo ""
-echo "🧪 Test commands:"
+echo "  Test commands:"
 echo "   curl http://$IP_WG1/service-a"
 echo "   curl http://$IP_WG1/service-b"
 echo "   curl http://$IP_WG1/health"

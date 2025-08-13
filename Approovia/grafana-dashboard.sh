@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "📊 Deploying Custom Grafana Dashboard"
+echo " Deploying Custom Grafana Dashboard"
 echo "====================================="
 
 # Get connection details
@@ -13,7 +13,7 @@ echo "Deploying dashboard to Grafana on: $IP_WG1:3000"
 
 # Deploy the dashboard via Grafana API
 deploy_dashboard() {
-    echo "📤 Uploading dashboard via Grafana API..."
+    echo " Uploading dashboard via Grafana API..."
     
     # Dashboard JSON content
     DASHBOARD_JSON='{
@@ -165,11 +165,11 @@ deploy_dashboard() {
         http://$IP_WG1:3000/api/dashboards/db)
     
     if echo "$RESPONSE" | grep -q '"status":"success"'; then
-        echo "✅ Dashboard deployed successfully"
+        echo " Dashboard deployed successfully"
         DASHBOARD_URL=$(echo "$RESPONSE" | jq -r '.url' 2>/dev/null || echo "/d/container_monitoring")
-        echo "🔗 Dashboard URL: http://$IP_WG1:3000$DASHBOARD_URL"
+        echo " Dashboard URL: http://$IP_WG1:3000$DASHBOARD_URL"
     else
-        echo "❌ Dashboard deployment failed"
+        echo " Dashboard deployment failed"
         echo "Response: $RESPONSE"
         return 1
     fi
@@ -177,7 +177,7 @@ deploy_dashboard() {
 
 # Alternative: Deploy via file system
 deploy_dashboard_file() {
-    echo "📁 Deploying dashboard via file system..."
+    echo " Deploying dashboard via file system..."
     
     ssh -i "$KEY_WG1" -o StrictHostKeyChecking=no $USER_WG1@$IP_WG1 << 'EOF'
     
@@ -334,20 +334,20 @@ DASHBOARD_EOF
     cd /opt/monitoring
     sudo docker-compose restart grafana
     
-    echo "✅ Dashboard file created and Grafana restarted"
+    echo " Dashboard file created and Grafana restarted"
     
 EOF
 }
 
 # Main deployment function
 main() {
-    echo "🚀 Starting dashboard deployment..."
+    echo " Starting dashboard deployment..."
     
     # Wait for Grafana to be ready
     echo "⏱️  Waiting for Grafana to be ready..."
     for i in {1..30}; do
         if curl -s http://$IP_WG1:3000/api/health | grep -q '"status":"ok"'; then
-            echo "✅ Grafana is ready"
+            echo " Grafana is ready"
             break
         fi
         echo "Waiting... ($i/30)"
@@ -356,24 +356,24 @@ main() {
     
     # Try API deployment first, fallback to file deployment
     if deploy_dashboard; then
-        echo "✅ Dashboard deployed via API"
+        echo " Dashboard deployed via API"
     else
-        echo "⚠️  API deployment failed, trying file deployment..."
+        echo "️  API deployment failed, trying file deployment..."
         deploy_dashboard_file
     fi
     
     echo ""
-    echo "🎉 Dashboard deployment completed!"
+    echo " Dashboard deployment completed!"
     echo ""
-    echo "📊 Access your dashboard:"
+    echo " Access your dashboard:"
     echo "   Grafana: http://$IP_WG1:3000"
     echo "   Login: admin / admin123"
     echo "   Dashboard: Container Monitoring Dashboard"
     echo ""
-    echo "🧪 Test the alerts:"
+    echo " Test the alerts:"
     echo "   Run: ./test-monitoring-alerts.sh"
     echo ""
-    echo "📈 Monitor these metrics:"
+    echo " Monitor these metrics:"
     echo "   • Container restarts (alert when >2 in 10min)"
     echo "   • Running container count"
     echo "   • Docker daemon health"

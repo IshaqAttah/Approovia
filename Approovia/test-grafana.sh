@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🧪 Testing Container Restart Monitoring & Alerts"
+echo " Testing Container Restart Monitoring & Alerts"
 echo "==============================================="
 
 # Get connection details
@@ -13,7 +13,7 @@ IP_WG3=$(vagrant ssh-config wg3 | awk '/HostName/ {print $2}')
 USER_WG2=$(vagrant ssh-config wg2 | awk '/User / {print $2}')
 USER_WG3=$(vagrant ssh-config wg3 | awk '/User / {print $2}')
 
-echo "📊 Monitoring endpoints:"
+echo " Monitoring endpoints:"
 echo "   Prometheus: http://$IP_WG1:9090"
 echo "   Grafana: http://$IP_WG1:3000"
 echo "   Alertmanager: http://$IP_WG1:9093"
@@ -25,22 +25,22 @@ check_monitoring() {
     
     # Check Prometheus
     if curl -s http://$IP_WG1:9090/api/v1/query?query=up | grep -q '"status":"success"'; then
-        echo "✅ Prometheus is responding"
+        echo " Prometheus is responding"
     else
-        echo "❌ Prometheus is not responding"
+        echo " Prometheus is not responding"
         return 1
     fi
     
     # Check Grafana
     if curl -s http://$IP_WG1:3000/api/health | grep -q '"status":"ok"'; then
-        echo "✅ Grafana is responding"
+        echo " Grafana is responding"
     else
-        echo "❌ Grafana is not responding"
+        echo " Grafana is not responding"
         return 1
     fi
     
     # Check targets
-    echo "📊 Current monitoring targets:"
+    echo " Current monitoring targets:"
     curl -s http://$IP_WG1:9090/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job): \(.labels.instance) - \(.health)"' 2>/dev/null || echo "Target status will be available shortly"
 }
 
@@ -53,7 +53,7 @@ trigger_restarts() {
     local restart_count=${5:-3}
     
     echo ""
-    echo "🔄 Triggering $restart_count container restarts on $vm_name..."
+    echo " Triggering $restart_count container restarts on $vm_name..."
     
     ssh -i "$vm_key" -o StrictHostKeyChecking=no $vm_user@$vm_ip << EOF
     echo "Current containers on $vm_name:"
@@ -87,7 +87,7 @@ EOF
 # Function to check alerts
 check_alerts() {
     echo ""
-    echo "🚨 Checking for triggered alerts..."
+    echo " Checking for triggered alerts..."
     
     # Wait a moment for metrics to be scraped
     sleep 15
@@ -199,7 +199,7 @@ create_dashboard() {
 }
 DASHBOARD_EOF
 
-    echo "✅ Dashboard configuration created"
+    echo " Dashboard configuration created"
 EOF
 }
 
@@ -215,7 +215,7 @@ main() {
     
     # Step 3: Show current baseline
     echo ""
-    echo "📊 Current baseline metrics:"
+    echo " Current baseline metrics:"
     check_alerts
     
     # Step 4: Trigger restarts on wg2 (should trigger alert)
@@ -223,7 +223,7 @@ main() {
     
     # Step 5: Check for alerts
     echo ""
-    echo "⏱️  Waiting for metrics to be scraped and alerts to trigger..."
+    echo "️  Waiting for metrics to be scraped and alerts to trigger..."
     sleep 30
     check_alerts
     
@@ -232,13 +232,13 @@ main() {
     
     # Step 7: Final check
     echo ""
-    echo "⏱️  Final check after all restarts..."
+    echo "️  Final check after all restarts..."
     sleep 30
     check_alerts
     
     # Step 8: Test recovery
     echo ""
-    echo "🔄 Testing recovery - ensuring all services are healthy..."
+    echo " Testing recovery - ensuring all services are healthy..."
     
     # Wait for services to stabilize
     sleep 20
@@ -246,26 +246,26 @@ main() {
     # Test all services via HAProxy
     echo "Testing services via HAProxy:"
     if curl -f http://$IP_WG1/service-a; then
-        echo "✅ Service A accessible via HAProxy"
+        echo " Service A accessible via HAProxy"
     else
-        echo "❌ Service A not accessible via HAProxy"
+        echo " Service A not accessible via HAProxy"
     fi
     
     if curl -f http://$IP_WG1/service-b; then
-        echo "✅ Service B accessible via HAProxy"
+        echo " Service B accessible via HAProxy"
     else
-        echo "❌ Service B not accessible via HAProxy"
+        echo " Service B not accessible via HAProxy"
     fi
     
     echo ""
-    echo "🎉 Monitoring test completed!"
+    echo " Monitoring test completed!"
     echo ""
-    echo "📊 View results in:"
+    echo " View results in:"
     echo "   Prometheus: http://$IP_WG1:9090/alerts"
     echo "   Grafana: http://$IP_WG1:3000 (admin:admin123)"
     echo "   Alertmanager: http://$IP_WG1:9093"
     echo ""
-    echo "💡 To import the dashboard in Grafana:"
+    echo " To import the dashboard in Grafana:"
     echo "   1. Go to http://$IP_WG1:3000"
     echo "   2. Login with admin:admin123"
     echo "   3. Go to + > Import"
@@ -274,7 +274,7 @@ main() {
 
 # Check if monitoring stack is available first
 if ! curl -s http://$IP_WG1:9090/api/v1/query?query=up >/dev/null 2>&1; then
-    echo "❌ Monitoring stack not available. Please run ./setup-monitoring-stack.sh first"
+    echo " Monitoring stack not available. Please run ./setup-monitoring-stack.sh first"
     exit 1
 fi
 

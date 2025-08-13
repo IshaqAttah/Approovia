@@ -64,6 +64,113 @@ curl http://192.168.253.133:80/service-b
 # Install Prometheus & Grafana
 ./setup-monitoring-stack.sh
 
+#After running that, Open Docker Desktop
+#Go to Settings → Docker Engine
+#Add to the JSON:
+
+json{
+  "insecure-registries": ["192.168.253.135:5000"]
+}
+#Apply and restart
+# Then Download monitoring images
+docker pull prom/prometheus:latest
+docker pull grafana/grafana:latest
+docker pull prom/alertmanager:latest
+
+# Tag for your registry
+docker tag prom/prometheus:latest 192.168.253.135:5000/prometheus:latest
+docker tag grafana/grafana:latest 192.168.253.135:5000/grafana:latest
+docker tag prom/alertmanager:latest 192.168.253.135:5000/alertmanager:latest
+
+# Push to your registry
+docker push 192.168.253.135:5000/prometheus:latest
+docker push 192.168.253.135:5000/grafana:latest
+docker push 192.168.253.135:5000/alertmanager:latest
+
+#Then ssh ino wg1
+vagrant ssh wg1
+
+cd /opt/monitoring
+
+# Update docker-compose.yml to use local registry
+sudo tee docker-compose.yml > /dev/null << 'EOF'
+version: '3.8'
+
+services:
+  prometheus:
+    image: 192.168.253.135:5000/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - /opt/monitoring/prometheus/config:/etc/prometheus
+      - /opt/monitoring/prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - monitoring
+
+  grafana:
+    image: 192.168.253.135:5000/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/monitoring/grafana/data:/var/lib/grafana
+      - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - /opt/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: 192.168.253.135:5000/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - /opt/monitoring/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+EOF
+
+# Start the monitoring stack
+sudo docker-compose up -d
+
+# Check status
+sleep 30
+sudo docker-compose ps
+
+exit
+
+# Check what's in registry
+curl http://192.168.253.135:5000/v2/
+#Then start the monitoring stack
+vagrant ssh wg1
+cd /opt/monitoring
+sudo docker-compose up -d
+sudo docker-compose ps
+exit
 # Deploy monitoring dashboard
 ./deploy-grafana-dashboard.sh
 ```
