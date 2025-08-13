@@ -93,24 +93,24 @@ check_alerts() {
     sleep 15
     
     # Check Prometheus alerts
-    echo "📊 Current Prometheus alerts:"
+    echo " Current Prometheus alerts:"
     curl -s http://$IP_WG1:9090/api/v1/alerts | jq -r '.data.alerts[] | "Alert: \(.labels.alertname) - State: \(.state) - Instance: \(.labels.instance)"' 2>/dev/null || echo "No alerts or alerts API not accessible"
     
     # Check container restart metrics
     echo ""
-    echo "📈 Container restart metrics (last 10 minutes):"
+    echo " Container restart metrics (last 10 minutes):"
     curl -s "http://$IP_WG1:9090/api/v1/query?query=increase(engine_daemon_container_states_containers{state=\"restarting\"}[10m])" | jq -r '.data.result[] | "Instance: \(.metric.instance) - Restarts: \(.value[1])"' 2>/dev/null || echo "Restart metrics not yet available"
     
     # Check running containers
     echo ""
-    echo "📦 Currently running containers:"
+    echo "  Currently running containers:"
     curl -s "http://$IP_WG1:9090/api/v1/query?query=engine_daemon_container_states_containers{state=\"running\"}" | jq -r '.data.result[] | "Instance: \(.metric.instance) - Running: \(.value[1])"' 2>/dev/null || echo "Container metrics not yet available"
 }
 
 # Function to create Grafana dashboard
 create_dashboard() {
     echo ""
-    echo "📊 Creating Grafana dashboard..."
+    echo " Creating Grafana dashboard..."
     
     # Create dashboard directory on wg1
     ssh -i "$(vagrant ssh-config wg1 | awk '/IdentityFile/ {print $2}')" -o StrictHostKeyChecking=no vagrant@$IP_WG1 << 'EOF'
