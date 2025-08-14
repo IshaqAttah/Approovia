@@ -1,305 +1,210 @@
-# Complete DevOps Infrastructure Setup
+# Multi-Cloud DevOps Infrastructure
 
-A containerized microservices deployment platform with automated CI/CD, load balancing, and monitoring.
+A complete containerized microservices deployment across AWS and GCP with automated CI/CD, load balancing, and monitoring.
 
 ## What This Project Includes
 
-- Multi-VM Setup – 3 VMs (`wg1`, `wg2`, `wg3`) with Vagrant
-- Containerized Services – Docker-based Go microservices
-- Load Balancing – HAProxy with SSL and health checks
-- CI/CD Pipeline – Drone CI with automated deployment
-- Monitoring – Prometheus + Grafana with alerting
+- **Multi-Cloud Setup** – AWS server (HAProxy + Monitoring) and GCP server (Services)
+- **Containerized Services** – Two Go microservices (Service A & Service B)
+- **Load Balancing** – HAProxy with path-based routing
+- **CI/CD Pipeline** – Drone CI configuration for automated deployment
+- **Monitoring** – Prometheus + Grafana with container restart alerting
+- **Secure Networking** – WireGuard VPN tunnel connecting AWS and GCP
 
-## How to Run Everything
+## Infrastructure Overview
 
-### Step 1 – Start VMs
-
-```bash
-# Start all VMs
-vagrant up
-
-# Verify VMs are running
-vagrant status
+```
+Internet → AWS Server (Load Balancer + Monitoring) → WireGuard → GCP Server (Services)
+          ├── HAProxy (:80)                                    ├── Service A (:8080)
+          ├── Docker Registry (:5000)                          ├── Service B (:8081)
+          ├── Prometheus (:9090)                               ├── cAdvisor (:8082)
+          └── Grafana (:3000)                                  └── Node Exporter (:9100)
 ```
 
-### Step 2 – Deploy Docker Services
+## How to Deploy Everything
+
+### Step 1 – Deploy Docker Services
 
 ```bash
-cd Approovia
-# Set wg1 as registry and deploy microservices to wg2 and wg3
+# Build and deploy microservices to GCP
 ./deploy.sh
 ```
 
-**Test Services**
+**Test Services Directly:**
 
 ```bash
-curl http://192.168.253.135:8081
-curl http://192.168.253.135:8082
+curl http://34.88.69.228:8080  # Service A
+curl http://34.88.69.228:8081  # Service B
 ```
 
-### Step 3 – Setup Load Balancer
+### Step 2 – Setup Load Balancer
 
 ```bash
-# Configure HAProxy on wg1
-./haproxy.sh
+# Configure HAProxy on AWS server
+./deploy-haproxy.sh
 ```
 
-**Test via wg1**
+**Test via Load Balancer:**
 
 ```bash
-curl http://192.168.253.133:80/service-a
-curl http://192.168.253.133:80/service-b
+curl http://13.51.108.204/service-a
+curl http://13.51.108.204/service-b
 ```
 
-### Step 4 – Setup CI/CD Pipeline
+### Step 3 – Setup CI/CD Pipeline
 
 ```bash
-# Install Drone CI
-./setup-drone-ci.sh
+# Install Drone CI locally
+./setup-drone.sh
+
+# Access Drone at http://localhost:3000
 ```
 
-### Step 5 – Setup Monitoring
+### Step 4 – Setup Monitoring
 
 ```bash
-# Install Prometheus & Grafana
-./setup-monitoring-stack.sh
-
-#After running that, Open Docker Desktop
-#Go to Settings → Docker Engine
-#Add to the JSON:
-
-json{
-  "insecure-registries": ["192.168.253.135:5000"]
-}
-#Apply and restart
-# Then Download monitoring images from the terminal, not any of the vms.
-docker pull prom/prometheus:latest
-docker pull grafana/grafana:latest
-docker pull prom/alertmanager:latest
-
-# Tag for registry
-docker tag prom/prometheus:latest 192.168.253.135:5000/prometheus:latest
-docker tag grafana/grafana:latest 192.168.253.135:5000/grafana:latest
-docker tag prom/alertmanager:latest 192.168.253.135:5000/alertmanager:latest
-
-# Push to registry
-docker push 192.168.253.135:5000/prometheus:latest
-docker push 192.168.253.135:5000/grafana:latest
-docker push 192.168.253.135:5000/alertmanager:latest
-
-#Then ssh ino wg1
-vagrant ssh wg1
-
-cd /opt/monitoring
-
-# Update docker-compose.yml to use local registry
-sudo tee docker-compose.yml > /dev/null << 'EOF'
-version: '3.8'
-
-services:
-  prometheus:
-    image: 192.168.253.135:5000/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - /opt/monitoring/prometheus/config:/etc/prometheus
-      - /opt/monitoring/prometheus/data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-      - '--web.enable-admin-api'
-    networks:
-      - monitoring
-
-  grafana:
-    image: 192.168.253.135:5000/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - /opt/monitoring/grafana/data:/var/lib/grafana
-      - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - /opt/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
-      - GF_USERS_ALLOW_SIGN_UP=false
-    networks:
-      - monitoring
-
-  alertmanager:
-    image: 192.168.253.135:5000/alertmanager:latest
-    container_name: alertmanager
-    restart: unless-stopped
-    ports:
-      - "9093:9093"
-    volumes:
-      - /opt/monitoring/alertmanager:/etc/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
-    networks:
-      - monitoring
-
-networks:
-  monitoring:
-    driver: bridge
-EOF
-
-# Start the monitoring stack
-sudo docker-compose up -d
-
-# Check status
-sleep 30
-sudo docker-compose ps
-
-exit
-
-# Check what's in registry
-curl http://192.168.253.135:5000/v2/
-#Then start the monitoring stack
-vagrant ssh wg1
-cd /opt/monitoring
-sudo docker-compose up -d
-sudo docker-compose ps
-exit
-# Deploy monitoring dashboard
-./deploy-grafana-dashboard.sh
+# Deploy monitoring across both servers
+./deploy-monitoring.sh
 ```
 
-### Step 6 – Test Everything
+**This will:**
+
+- Install cAdvisor, Node Exporter on GCP
+- Install Prometheus, Grafana on AWS
+- Configure container restart alerts (>3 restarts per 10 minutes)
+
+## Access Your Infrastructure
+
+| Service           | URL                            | Login       |
+| ----------------- | ------------------------------ | ----------- |
+| **Service A**     | http://13.51.108.204/service-a | None        |
+| **Service B**     | http://13.51.108.204/service-b | None        |
+| **HAProxy Stats** | http://13.51.108.204/stats     | None        |
+| **Prometheus**    | http://13.51.108.204:9090      | None        |
+| **Grafana**       | http://13.51.108.204:3000      | admin/admin |
+| **Drone CI**      | http://localhost:3000          | admin       |
+
+## Key Features
+
+### Load Balancing
+
+- **Path-based routing**: `/service-a` and `/service-b`
+- **Health checks**: Automatic backend monitoring
+- **High availability**: Multiple service instances
+
+### Monitoring & Alerting
+
+- **Container metrics**: Memory, CPU, restart counts
+- **System metrics**: Host resources and performance
+- **Alerting**: Email/Slack notifications when containers restart frequently
+- **Dashboards**: Real-time visualization in Grafana
+
+### CI/CD Pipeline
+
+- **Automated testing**: Unit tests for both services
+- **Docker builds**: Cross-platform image creation
+- **Automated deployment**: Push-to-deploy workflow
+- **Multi-cloud**: Deploys across AWS and GCP automatically
+
+## Quick Health Check
 
 ```bash
-# Test services via load balancer
-curl http://192.168.253.133/service-a
-curl http://192.168.253.133/service-b
+# Test load balancer
+curl http://13.51.108.204/service-a
+curl http://13.51.108.204/service-b
 
 # Test monitoring
-./test-monitoring-alerts.sh
+curl http://13.51.108.204:9090/-/healthy  # Prometheus
+curl http://13.51.108.204:3000/api/health # Grafana
+
+# Test direct services
+curl http://34.88.69.228:8080  # Service A
+curl http://34.88.69.228:8081  # Service B
 ```
 
----
-
-## Access Points
-
-| Service           | URL                                                                                                                        | Login            |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| **Services**      | [Service A](https://0ba2fe09c83f.ngrok-free.app/service-a) <br> [Service B](https://0ba2fe09c83f.ngrok-free.app/service-b) | None             |
-| **HAProxy Stats** | [HAProxy](https://0ba2fe09c83f.ngrok-free.app/stats)                                                                       | `admin:admin123` |
-| **Prometheus**    | [Prometheus] (http://192.168.253.135:9090/targets)                                                                         | None             |
-| **Grafana**       | [Grafana] (http://192.168.253.135:9090/targets)                                                                            | `admin:admin123` |
-
-## Key Assumptions
-
-### Environment
-
-- Host OS: macOS or Linux
-- VM Provider: VMware or VirtualBox
-- Network: 192.168.253.x IP range
-- Resources: 1GB RAM per VM
-
-### Docker & Services
-
-- Registry: Insecure local registry
-- Architecture: \*\*x86_64 compatible
-- Ports: Containers listen on `0.0.0.0:8080`
-- Health Checks: Services respond to `GET /`
-
-### Network & Security
-
-- SSL: Self-signed certificates
-- Passwords: Default credentials
-- Access: `vagrant` user has `sudo` privileges
-
-## Troubleshooting
-
-### VMs Won't Start
+## Testing Container Restart Monitoring
 
 ```bash
-vagrant status
-vagrant halt
-vagrant up
-vagrant up --debug
+# SSH to GCP and restart containers to test alerts
+ssh -i ~/.ssh/id_rsa ishaq.musa@34.88.69.228
+docker restart service-a
+docker restart service-b
+docker restart service-a
+docker restart service-b
+
+# Check Prometheus for restart metrics
+# Query: increase(container_start_time_seconds[10m])
 ```
+
+## Troubleshooting
 
 ### Services Not Accessible
 
 ```bash
-# Check containers
-vagrant ssh wg2
-sudo docker ps
-
-# Restart if needed
-sudo docker restart service-a service-b
-
-# Logs
-sudo docker logs service-a
+# Check containers on GCP
+ssh -i ~/.ssh/id_rsa ishaq.musa@34.88.69.228
+docker ps
+docker logs service-a
+docker logs service-b
 ```
 
 ### HAProxy Returns 503
 
 ```bash
-vagrant ssh wg1
+# Check HAProxy on AWS
+ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
 sudo systemctl status haproxy
-curl http://192.168.253.133/stats
 sudo systemctl restart haproxy
 ```
 
 ### Monitoring Not Working
 
 ```bash
-vagrant ssh wg1
-cd /opt/monitoring
-sudo docker-compose ps
-sudo docker-compose down && sudo docker-compose up -d
-curl http://192.168.253.133:3000/api/health
+# Check monitoring services on AWS
+ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
+cd monitoring
+docker compose ps
+docker compose logs prometheus
+docker compose logs grafana
 ```
 
 ### Docker Registry Issues
 
 ```bash
-curl http://192.168.253.133:5000/v2/_catalog
-vagrant ssh wg1
-sudo docker restart registry
+# Check registry on AWS
+curl http://13.51.108.204:5000/v2/_catalog
+ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
+docker ps | grep registry
 ```
+
+## Server Information
+
+### AWS Server (13.51.108.204)
+
+- **SSH**:
+- **Services**: HAProxy, Docker Registry, Prometheus, Grafana
+- **Security Group**: Ports 22, 80, 3000, 5000, 9090 open
+
+### GCP Server (34.88.69.228)
+
+- **SSH**:
+- **Services**: Service A, Service B, cAdvisor, Node Exporter
+- **Firewall**: Ports 8080, 8081, 8082, 9100, 9323 open
 
 ## Complete Reset
 
 ```bash
-vagrant destroy -f
-vagrant up
-
-./deploy.sh
-./setup-haproxy.sh
-./setup-monitoring-stack.sh
-```
-
-## Quick Health Check
-
-```bash
-# Test services
-curl http://192.168.253.133/service-a
-curl http://192.168.253.133/service-b
-curl http://192.168.253.133:9090
-curl http://192.168.253.133:3000/api/health
-
-# Test VM connectivity
-vagrant ssh wg1 "echo 'wg1 ok'"
-vagrant ssh wg2 "echo 'wg2 ok'"
-vagrant ssh wg3 "echo 'wg3 ok'"
+# Redeploy everything from scratch
+./deploy.sh                 # Deploy services
+./deploy-haproxy.sh        # Setup load balancer
+./deploy-monitoring.sh     # Setup monitoring
 ```
 
 ## Success Criteria
 
-All 3 VMs are running
-Services respond via HAProxy
-Grafana dashboard shows container metrics
-Alerts trigger when containers restart
+Both servers are accessible via SSH  
+Services respond through load balancer  
+Grafana shows container metrics  
+Alerts trigger when containers restart >3 times in 10 minutes  
+Docker registry stores and serves images  
+WireGuard tunnel connects AWS and GCP securely

@@ -1,213 +1,262 @@
+---
 kind: pipeline
 type: docker
-name: Approovia-deployment
+name: multi-cloud-deployment
 
-# Global environment variables
-environment:
-  REGISTRY_HOST: 192.168.253.135:5000  # wg1 (registry)
-  WG2_HOST: 192.168.253.128            # wg2 (target)
-  WG3_HOST: 192.168.253.133            # wg3 (target)
-
-steps:
-  # Step 1: Run unit tests for service-a
-  - name: test-service-a
-    image: golang:1.21-alpine
-    commands:
-      - cd services/service-a
-      - go mod download
-      - go test -v ./...
-      - go test -race -coverprofile=coverage.out ./...
-      - go tool cover -html=coverage.out -o coverage.html
-    volumes:
-      - name: test-cache
-        path: /go/pkg
-
-  # Step 2: Run unit tests for service-b
-  - name: test-service-b
-    image: golang:1.21-alpine
-    commands:
-      - cd services/service-b
-      - go mod download
-      - go test -v ./...
-      - go test -race -coverprofile=coverage.out ./...
-      - go tool cover -html=coverage.out -o coverage.html
-    volumes:
-      - name: test-cache
-        path: /go/pkg
-
-  # Step 3: Build and push service-a Docker image
-  - name: build-push-service-a
-    image: plugins/docker
-    settings:
-      registry: 192.168.253.135:5000
-      repo: 192.168.253.135:5000/service-a
-      tags:
-        - latest
-        - ${DRONE_COMMIT_SHA:0:8}
-      context: services/service-a
-      dockerfile: services/service-a/Dockerfile
-      insecure: true
-      build_args:
-        - BUILDKIT_INLINE_CACHE=1
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
-    depends_on:
-      - test-service-a
-
-  # Step 4: Build and push service-b Docker image
-  - name: build-push-service-b
-    image: plugins/docker
-    settings:
-      registry: 192.168.253.135:5000
-      repo: 192.168.253.135:5000/service-b
-      tags:
-        - latest
-        - ${DRONE_COMMIT_SHA:0:8}
-      context: services/service-b
-      dockerfile: services/service-b/Dockerfile
-      insecure: true
-      build_args:
-        - BUILDKIT_INLINE_CACHE=1
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
-    depends_on:
-      - test-service-b
-
-  # Step 5: Deploy to wg2
-  - name: deploy-to-wg2
-    image: alpine:latest
-    environment:
-      SSH_KEY:
-        from_secret: ssh_private_key
-      DEPLOY_USER: vagrant
-    commands:
-      # Install dependencies
-      - apk add --no-cache openssh-client sshpass
-
-      # Setup SSH key
-      - mkdir -p ~/.ssh
-      - echo "$SSH_KEY" > ~/.ssh/id_rsa
-      - chmod 600 ~/.ssh/id_rsa
-      - ssh-keyscan -H $WG2_HOST >> ~/.ssh/known_hosts
-
-      # Deploy to wg2
-      - |
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $DEPLOY_USER@$WG2_HOST << 'DEPLOY_SCRIPT'
-        # Configure Docker for insecure registry
-        echo '{"insecure-registries": ["$REGISTRY_HOST"]}' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker
-        sleep 5
-
-        # Pull latest images
-        sudo docker pull $REGISTRY_HOST/service-a:latest
-        sudo docker pull $REGISTRY_HOST/service-b:latest
-
-        # Stop and remove existing containers
-        sudo docker stop service-a service-b 2>/dev/null || true
-        sudo docker rm service-a service-b 2>/dev/null || true
-
-        # Start new containers
-        sudo docker run -d --name service-a --restart unless-stopped -p 8081:8080 $REGISTRY_HOST/service-a:latest
-        sudo docker run -d --name service-b --restart unless-stopped -p 8082:8080 $REGISTRY_HOST/service-b:latest
-
-        # Verify deployment
-        sleep 3
-        sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-        echo " Deployment to wg2 completed successfully"
-        DEPLOY_SCRIPT
-    depends_on:
-      - build-push-service-a
-      - build-push-service-b
-
-  # Step 6: Deploy to wg3
-  - name: deploy-to-wg3
-    image: alpine:latest
-    environment:
-      SSH_KEY:
-        from_secret: ssh_private_key
-      DEPLOY_USER: vagrant
-    commands:
-      # Install dependencies
-      - apk add --no-cache openssh-client sshpass
-
-      # Setup SSH key
-      - mkdir -p ~/.ssh
-      - echo "$SSH_KEY" > ~/.ssh/id_rsa
-      - chmod 600 ~/.ssh/id_rsa
-      - ssh-keyscan -H $WG3_HOST >> ~/.ssh/known_hosts
-
-      # Deploy to wg3
-      - |
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $DEPLOY_USER@$WG3_HOST << 'DEPLOY_SCRIPT'
-        # Configure Docker for insecure registry
-        echo '{"insecure-registries": ["$REGISTRY_HOST"]}' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker
-        sleep 5
-
-        # Pull latest images
-        sudo docker pull $REGISTRY_HOST/service-a:latest
-        sudo docker pull $REGISTRY_HOST/service-b:latest
-
-        # Stop and remove existing containers
-        sudo docker stop service-a service-b 2>/dev/null || true
-        sudo docker rm service-a service-b 2>/dev/null || true
-
-        # Start new containers
-        sudo docker run -d --name service-a --restart unless-stopped -p 8081:8080 $REGISTRY_HOST/service-a:latest
-        sudo docker run -d --name service-b --restart unless-stopped -p 8082:8080 $REGISTRY_HOST/service-b:latest
-
-        # Verify deployment
-        sleep 3
-        sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-        echo " Deployment to wg3 completed successfully"
-        DEPLOY_SCRIPT
-    depends_on:
-      - build-push-service-a
-      - build-push-service-b
-
-  # Step 7: Health check and notification
-  - name: health-check
-    image: alpine:latest
-    commands:
-      - apk add --no-cache curl
-      # Test services via HAProxy
-      - echo " Testing services via HAProxy..."
-      - curl -f http://192.168.253.135:80/service-a || exit 1
-      - curl -f http://192.168.253.135:80/service-b || exit 1
-      - echo " All services are healthy and accessible via HAProxy"
-
-      # Test direct access to backends
-      - echo "  Testing direct backend access..."
-      - curl -f http://192.168.253.128:8081 || exit 1
-      - curl -f http://192.168.253.128:8082 || exit 1
-      - curl -f http://192.168.253.133:8081 || exit 1
-      - curl -f http://192.168.253.133:8082 || exit 1
-      - echo " All backend services are healthy"
-
-      - echo " Deployment pipeline completed successfully!"
-    depends_on:
-      - deploy-to-wg2
-      - deploy-to-wg3
-
-# Pipeline volumes
-volumes:
-  - name: docker-sock
-    host:
-      path: /var/run/docker.sock
-  - name: test-cache
-    temp: {}
-
-# Pipeline triggers
+# Trigger configuration - only on push
 trigger:
   branch:
     - main
     - master
-    - develop
   event:
     - push
-    - pull_request
+
+# Global environment variables
+environment:
+  DOCKER_REGISTRY: 13.51.108.204:5000
+  AWS_IP: 13.51.108.204
+  GCP_IP: 34.88.69.228
+  AWS_USER: ubuntu
+  GCP_USER: ishaq.musa
+
+# Pipeline steps
+steps:
+  # Step 1: Run unit tests for Service A
+  - name: test-service-a
+    image: golang:1.21-alpine
+    commands:
+      - cd services/service-a
+      - go mod tidy
+      - go test -v ./...
+      - go vet ./...
+      - gofmt -l .
+    when:
+      event:
+        - push
+
+  # Step 2: Run unit tests for Service B
+  - name: test-service-b
+    image: golang:1.21-alpine
+    commands:
+      - cd services/service-b
+      - go mod tidy
+      - go test -v ./...
+      - go vet ./...
+      - gofmt -l .
+    when:
+      event:
+        - push
+
+  # Step 3: Build Service A Docker image
+  - name: build-service-a
+    image: plugins/docker
+    settings:
+      registry: 13.51.108.204:5000
+      repo: 13.51.108.204:5000/service-a
+      tags:
+        - latest
+        - ${DRONE_COMMIT_SHA:0:8}
+      dockerfile: services/service-a/Dockerfile
+      context: services/service-a
+      insecure: true
+      platform: linux/amd64
+    depends_on:
+      - test-service-a
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+
+  # Step 4: Build Service B Docker image
+  - name: build-service-b
+    image: plugins/docker
+    settings:
+      registry: 13.51.108.204:5000
+      repo: 13.51.108.204:5000/service-b
+      tags:
+        - latest
+        - ${DRONE_COMMIT_SHA:0:8}
+      dockerfile: services/service-b/Dockerfile
+      context: services/service-b
+      insecure: true
+      platform: linux/amd64
+    depends_on:
+      - test-service-b
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+
+  # Step 5: Deploy to GCP (pull images and run containers)
+  - name: deploy-to-gcp
+    image: alpine:latest
+    environment:
+      GCP_SSH_KEY:
+        from_secret: gcp_ssh_key
+    commands:
+      # Install dependencies
+      - apk add --no-cache openssh-client curl
+      
+      # Setup SSH
+      - mkdir -p ~/.ssh
+      - echo "$GCP_SSH_KEY" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - ssh-keyscan -H $GCP_IP >> ~/.ssh/known_hosts
+      
+      # Deploy to GCP
+      - |
+        ssh -i ~/.ssh/id_rsa $GCP_USER@$GCP_IP << 'EOF'
+        # Configure Docker for insecure registry
+        echo '{"insecure-registries": ["13.51.108.204:5000"]}' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker
+        sleep 5
+        
+        # Stop existing containers
+        docker stop service-a service-b 2>/dev/null || true
+        docker rm service-a service-b 2>/dev/null || true
+        
+        # Pull latest images
+        docker pull 13.51.108.204:5000/service-a:latest
+        docker pull 13.51.108.204:5000/service-b:latest
+        
+        # Create network if it doesn't exist
+        docker network create services-network 2>/dev/null || true
+        
+        # Run Service A
+        docker run -d \
+          --name service-a \
+          --network services-network \
+          --restart unless-stopped \
+          -p 8080:8080 \
+          --health-cmd="wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1" \
+          --health-interval=30s \
+          --health-timeout=3s \
+          --health-start-period=5s \
+          --health-retries=3 \
+          13.51.108.204:5000/service-a:latest
+        
+        # Run Service B
+        docker run -d \
+          --name service-b \
+          --network services-network \
+          --restart unless-stopped \
+          -p 8081:8080 \
+          --health-cmd="wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1" \
+          --health-interval=30s \
+          --health-timeout=3s \
+          --health-start-period=5s \
+          --health-retries=3 \
+          13.51.108.204:5000/service-b:latest
+        
+        # Wait for services to be healthy
+        echo "Waiting for services to become healthy..."
+        sleep 30
+        
+        # Verify deployment
+        docker ps --filter "name=service-"
+        curl -f http://localhost:8080/health && echo "Service A is healthy"
+        curl -f http://localhost:8081/health && echo "Service B is healthy"
+        EOF
+    depends_on:
+      - build-service-a
+      - build-service-b
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+
+  # Step 6: Update HAProxy configuration (optional)
+  - name: update-haproxy
+    image: alpine:latest
+    environment:
+      AWS_SSH_KEY:
+        from_secret: aws_ssh_key
+    commands:
+      # Install dependencies
+      - apk add --no-cache openssh-client
+      
+      # Setup SSH
+      - mkdir -p ~/.ssh
+      - echo "$AWS_SSH_KEY" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - ssh-keyscan -H $AWS_IP >> ~/.ssh/known_hosts
+      
+      # Restart HAProxy to ensure connectivity
+      - |
+        ssh -i ~/.ssh/id_rsa $AWS_USER@$AWS_IP << 'EOF'
+        # Test connectivity to services
+        curl -f http://34.88.69.228:8080/health || echo "Service A not ready"
+        curl -f http://34.88.69.228:8081/health || echo "Service B not ready"
+        
+        # Restart HAProxy
+        sudo systemctl restart haproxy
+        sleep 5
+        
+        # Verify HAProxy is working
+        curl -f http://localhost/service-a && echo "HAProxy -> Service A: OK"
+        curl -f http://localhost/service-b && echo "HAProxy -> Service B: OK"
+        EOF
+    depends_on:
+      - deploy-to-gcp
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+
+  # Step 7: Integration tests
+  - name: integration-tests
+    image: alpine:latest
+    commands:
+      # Install curl
+      - apk add --no-cache curl
+      
+      # Test services via HAProxy
+      - echo "Testing services via HAProxy..."
+      - curl -f http://$AWS_IP/service-a || exit 1
+      - curl -f http://$GCP_IP:8080 || exit 1
+      - curl -f http://$AWS_IP/service-b || exit 1
+      - curl -f http://$GCP_IP:8081 || exit 1
+      
+      # Test HAProxy stats
+      - curl -f http://$AWS_IP/stats || echo "Stats page not accessible"
+      
+      - echo "All integration tests passed!"
+    depends_on:
+      - update-haproxy
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+
+  # Step 8: Notification (optional)
+  - name: notify-success
+    image: alpine:latest
+    commands:
+      - echo "  Deployment completed successfully!"
+      - echo "Services available at:"
+      - echo "  Service A: http://$AWS_IP/service-a"
+      - echo "  Service B: http://$AWS_IP/service-b"
+      - echo "  HAProxy Stats: http://$AWS_IP/stats"
+    depends_on:
+      - integration-tests
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - master
+      status:
+        - success
+
+
 
