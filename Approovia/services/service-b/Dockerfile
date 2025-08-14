@@ -1,4 +1,3 @@
-# Multi-stage build for lean and secure images
 FROM golang:1.21-alpine AS builder
 
 # Install ca-certificates and create non-root user
