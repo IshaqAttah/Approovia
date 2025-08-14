@@ -142,7 +142,7 @@ docker restart service-b
 
 ```bash
 # Check containers on GCP
-ssh -i ~/.ssh/id_rsa ishaq.musa@34.88.69.228
+ssh
 docker ps
 docker logs service-a
 docker logs service-b
@@ -152,7 +152,7 @@ docker logs service-b
 
 ```bash
 # Check HAProxy on AWS
-ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
+ssh
 sudo systemctl status haproxy
 sudo systemctl restart haproxy
 ```
@@ -161,7 +161,7 @@ sudo systemctl restart haproxy
 
 ```bash
 # Check monitoring services on AWS
-ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
+ssh
 cd monitoring
 docker compose ps
 docker compose logs prometheus
@@ -173,7 +173,7 @@ docker compose logs grafana
 ```bash
 # Check registry on AWS
 curl http://13.51.108.204:5000/v2/_catalog
-ssh -i ~/Downloads/app-key-pair.pem ubuntu@13.51.108.204
+ssh
 docker ps | grep registry
 ```
 
