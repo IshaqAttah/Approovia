@@ -1,13 +1,12 @@
----
 kind: pipeline
 type: docker
-name: microservices-deployment
+name: Approovia-deployment
 
 # Global environment variables
 environment:
-  REGISTRY_HOST: 192.168.253.133:5000
-  WG2_HOST: 192.168.253.128
-  WG3_HOST: 192.168.253.135
+  REGISTRY_HOST: 192.168.253.135:5000  # wg1 (registry)
+  WG2_HOST: 192.168.253.128            # wg2 (target)
+  WG3_HOST: 192.168.253.133            # wg3 (target)
 
 steps:
   # Step 1: Run unit tests for service-a
@@ -23,7 +22,7 @@ steps:
       - name: test-cache
         path: /go/pkg
 
-  # Step 2: Run unit tests for service-b  
+  # Step 2: Run unit tests for service-b
   - name: test-service-b
     image: golang:1.21-alpine
     commands:
@@ -40,8 +39,8 @@ steps:
   - name: build-push-service-a
     image: plugins/docker
     settings:
-      registry: 192.168.253.133:5000
-      repo: 192.168.253.133:5000/service-a
+      registry: 192.168.253.135:5000
+      repo: 192.168.253.135:5000/service-a
       tags:
         - latest
         - ${DRONE_COMMIT_SHA:0:8}
@@ -60,8 +59,8 @@ steps:
   - name: build-push-service-b
     image: plugins/docker
     settings:
-      registry: 192.168.253.133:5000
-      repo: 192.168.253.133:5000/service-b
+      registry: 192.168.253.135:5000
+      repo: 192.168.253.135:5000/service-b
       tags:
         - latest
         - ${DRONE_COMMIT_SHA:0:8}
@@ -86,13 +85,13 @@ steps:
     commands:
       # Install dependencies
       - apk add --no-cache openssh-client sshpass
-      
+
       # Setup SSH key
       - mkdir -p ~/.ssh
       - echo "$SSH_KEY" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
       - ssh-keyscan -H $WG2_HOST >> ~/.ssh/known_hosts
-      
+
       # Deploy to wg2
       - |
         ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $DEPLOY_USER@$WG2_HOST << 'DEPLOY_SCRIPT'
@@ -100,24 +99,24 @@ steps:
         echo '{"insecure-registries": ["$REGISTRY_HOST"]}' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
         sleep 5
-        
+
         # Pull latest images
         sudo docker pull $REGISTRY_HOST/service-a:latest
         sudo docker pull $REGISTRY_HOST/service-b:latest
-        
+
         # Stop and remove existing containers
         sudo docker stop service-a service-b 2>/dev/null || true
         sudo docker rm service-a service-b 2>/dev/null || true
-        
+
         # Start new containers
         sudo docker run -d --name service-a --restart unless-stopped -p 8081:8080 $REGISTRY_HOST/service-a:latest
         sudo docker run -d --name service-b --restart unless-stopped -p 8082:8080 $REGISTRY_HOST/service-b:latest
-        
+
         # Verify deployment
         sleep 3
         sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-        
-        echo "✅ Deployment to wg2 completed successfully"
+
+        echo " Deployment to wg2 completed successfully"
         DEPLOY_SCRIPT
     depends_on:
       - build-push-service-a
@@ -133,13 +132,13 @@ steps:
     commands:
       # Install dependencies
       - apk add --no-cache openssh-client sshpass
-      
+
       # Setup SSH key
       - mkdir -p ~/.ssh
       - echo "$SSH_KEY" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
       - ssh-keyscan -H $WG3_HOST >> ~/.ssh/known_hosts
-      
+
       # Deploy to wg3
       - |
         ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $DEPLOY_USER@$WG3_HOST << 'DEPLOY_SCRIPT'
@@ -147,24 +146,24 @@ steps:
         echo '{"insecure-registries": ["$REGISTRY_HOST"]}' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
         sleep 5
-        
+
         # Pull latest images
         sudo docker pull $REGISTRY_HOST/service-a:latest
         sudo docker pull $REGISTRY_HOST/service-b:latest
-        
+
         # Stop and remove existing containers
         sudo docker stop service-a service-b 2>/dev/null || true
         sudo docker rm service-a service-b 2>/dev/null || true
-        
+
         # Start new containers
         sudo docker run -d --name service-a --restart unless-stopped -p 8081:8080 $REGISTRY_HOST/service-a:latest
         sudo docker run -d --name service-b --restart unless-stopped -p 8082:8080 $REGISTRY_HOST/service-b:latest
-        
+
         # Verify deployment
         sleep 3
         sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-        
-        echo "✅ Deployment to wg3 completed successfully"
+
+        echo " Deployment to wg3 completed successfully"
         DEPLOY_SCRIPT
     depends_on:
       - build-push-service-a
@@ -176,20 +175,20 @@ steps:
     commands:
       - apk add --no-cache curl
       # Test services via HAProxy
-      - echo "🧪 Testing services via HAProxy..."
-      - curl -f http://192.168.253.133:80/service-a || exit 1
-      - curl -f http://192.168.253.133:80/service-b || exit 1
-      - echo "✅ All services are healthy and accessible via HAProxy"
-      
+      - echo " Testing services via HAProxy..."
+      - curl -f http://192.168.253.135:80/service-a || exit 1
+      - curl -f http://192.168.253.135:80/service-b || exit 1
+      - echo " All services are healthy and accessible via HAProxy"
+
       # Test direct access to backends
-      - echo "🧪 Testing direct backend access..."
+      - echo "  Testing direct backend access..."
       - curl -f http://192.168.253.128:8081 || exit 1
       - curl -f http://192.168.253.128:8082 || exit 1
-      - curl -f http://192.168.253.135:8081 || exit 1
-      - curl -f http://192.168.253.135:8082 || exit 1
-      - echo "✅ All backend services are healthy"
-      
-      - echo "🎉 Deployment pipeline completed successfully!"
+      - curl -f http://192.168.253.133:8081 || exit 1
+      - curl -f http://192.168.253.133:8082 || exit 1
+      - echo " All backend services are healthy"
+
+      - echo " Deployment pipeline completed successfully!"
     depends_on:
       - deploy-to-wg2
       - deploy-to-wg3
@@ -212,26 +211,3 @@ trigger:
     - push
     - pull_request
 
----
-# Optional: Pipeline for feature branches (without deployment)
-kind: pipeline
-type: docker
-name: feature-testing
-
-steps:
-  - name: test-only
-    image: golang:1.21-alpine
-    commands:
-      - echo "Running tests for feature branch..."
-      - cd services/service-a && go test -v ./...
-      - cd ../service-b && go test -v ./...
-      - echo "✅ Feature branch tests passed"
-
-trigger:
-  branch:
-    exclude:
-      - main
-      - master
-      - develop
-  event:
-    - push
