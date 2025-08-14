@@ -175,8 +175,6 @@ exit
 ./deploy-grafana-dashboard.sh
 ```
 
----
-
 ### Step 6 – Test Everything
 
 ```bash
@@ -210,7 +208,7 @@ curl http://192.168.253.133/service-b
 
 ### Docker & Services
 
-- Registry: Insecure local registry (dev only)
+- Registry: Insecure local registry
 - Architecture: \*\*x86_64 compatible
 - Ports: Containers listen on `0.0.0.0:8080`
 - Health Checks: Services respond to `GET /`
@@ -218,7 +216,7 @@ curl http://192.168.253.133/service-b
 ### Network & Security
 
 - SSL: Self-signed certificates
-- Passwords: Default credentials (change for prod)
+- Passwords: Default credentials
 - Access: `vagrant` user has `sudo` privileges
 
 ## Troubleshooting
